@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import Project, Contributor, Issue, Comment
+from authentication.models import CustomUser
 from authentication.serializers import UserSerializer
-
 
 class ProjectSerializer(serializers.ModelSerializer):
     author = UserSerializer(read_only=True)
@@ -15,20 +15,19 @@ class ProjectSerializer(serializers.ModelSerializer):
         validated_data['author'] = request.user
         return super().create(validated_data)
 
-
 class ContributorSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
+    user = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.all())  # Utiliser directement user
     project = serializers.PrimaryKeyRelatedField(queryset=Project.objects.all())
 
     class Meta:
         model = Contributor
         fields = ['id', 'user', 'project', 'created_time']
 
-    def create(self, validated_data):
-        request = self.context.get('request')
-        validated_data['user'] = request.user
-        return super().create(validated_data)
-
+    def to_representation(self, instance):
+        # Utiliser UserSerializer pour la lecture
+        representation = super().to_representation(instance)
+        representation['user'] = UserSerializer(instance.user).data
+        return representation
 
 class IssueSerializer(serializers.ModelSerializer):
     author = UserSerializer(read_only=True)
@@ -43,7 +42,6 @@ class IssueSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         validated_data['author'] = request.user
         return super().create(validated_data)
-
 
 class CommentSerializer(serializers.ModelSerializer):
     author = UserSerializer(read_only=True)
