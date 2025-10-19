@@ -139,6 +139,6 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),  # Expire après 1 heure
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),  # Refresh token valable 7 jours
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),  # Expire après 5 heures
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),  # Refresh token valable 1 jours
 }

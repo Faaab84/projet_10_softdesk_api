@@ -4,13 +4,18 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-django = "*"
-djangorestframework = "*"
-djangorestframework-simplejwt = "*"
+django = "==5.2.6"
+djangorestframework = "==3.16.1"
+djangorestframework-simplejwt = "==5.5.1"
+asgiref = "==3.9.2"
+sqlparse = "==0.5.3"
+PyJWT = "==2.10.1"
+tzdata = "==2025.2"
 
 [dev-packages]
-black = "*"
-flake8 = "*"
+black = "==24.8.0"  # Version stable récente
+flake8 = "==6.1.0"  # Version correspondant à ton environnement
+flake8-html = "*"
 
 [requires]
 python_version = "3.11"

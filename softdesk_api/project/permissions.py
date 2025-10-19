@@ -60,4 +60,3 @@ class IsProjectAuthor(BasePermission):
         if isinstance(obj, Contributor):
             return obj.project.author == request.user
         return False
-

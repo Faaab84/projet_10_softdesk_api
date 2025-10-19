@@ -7,7 +7,19 @@ import uuid
 
 
 class SoftDeskAPITestCase(APITestCase):
+    """
+    Classe de tests pour l'API SoftDesk.
+
+    Cette classe utilise APITestCase pour tester les fonctionnalités CRUD
+    et les permissions de l'API pour les modèles Project, Contributor, Issue et Comment.
+    """
     def setUp(self):
+        """
+        Configure l'environnement de test.
+
+        Crée des utilisateurs, un projet, un contributeur, une issue et un commentaire
+        pour les tests.
+        """
         # Créer des utilisateurs de test
         self.admin = CustomUser.objects.create_superuser(
             username='admin_test',
@@ -61,7 +73,16 @@ class SoftDeskAPITestCase(APITestCase):
         )
 
     def get_token(self, username, password):
-        """Obtenir un access_token pour un utilisateur."""
+        """
+        Obtient un jeton d'accès pour un utilisateur.
+
+        Args:
+            username (str): Nom d'utilisateur.
+            password (str): Mot de passe.
+
+        Returns:
+            str: Jeton d'accès JWT.
+        """
         response = self.client.post(
             '/api/token/',
             {'username': username, 'password': password},
@@ -70,10 +91,11 @@ class SoftDeskAPITestCase(APITestCase):
         return response.data['access']
 
     def test_project_crud_author(self):
-        """Test CRUD pour Project par l'auteur."""
+        """
+        Teste les opérations CRUD pour Project par l'auteur.
+        """
         token = self.get_token('alice', 'userpass789')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-
         # Créer
         response = self.client.post(
             '/api/projects/',
@@ -81,14 +103,12 @@ class SoftDeskAPITestCase(APITestCase):
             format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
         # Lister (pagination)
         response = self.client.get('/api/projects/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('count', response.data)
         self.assertIn('results', response.data)
         self.assertLessEqual(len(response.data['results']), 10)  # PAGE_SIZE
-
         # Mettre à jour
         project_id = response.data['results'][0]['id']
         response = self.client.put(
@@ -97,30 +117,33 @@ class SoftDeskAPITestCase(APITestCase):
             format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-
         # Supprimer
         response = self.client.delete(f'/api/projects/{project_id}/')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
     def test_project_access_non_contributor(self):
-        """Test accès à Project par un non-contributeur."""
+        """
+        Teste l'accès à Project par un non-contributeur.
+        """
         token = self.get_token('bob', 'userpass789')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-
         response = self.client.get('/api/projects/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 0)  # Liste vide
 
     def test_project_access_unauthenticated(self):
-        """Test accès à Project sans authentification."""
+        """
+        Teste l'accès à Project sans authentification.
+        """
         response = self.client.get('/api/projects/')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_contributor_crud_author(self):
-        """Test CRUD pour Contributor par l'auteur du projet."""
+        """
+        Teste les opérations CRUD pour Contributor par l'auteur du projet.
+        """
         token = self.get_token('alice', 'userpass789')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-
         # Ajouter un contributeur
         response = self.client.post(
             f'/api/projects/{self.project.id}/contributors/',
@@ -128,22 +151,21 @@ class SoftDeskAPITestCase(APITestCase):
             format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
         # Lister
         response = self.client.get(f'/api/projects/{self.project.id}/contributors/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertGreater(len(response.data['results']), 0)
-
         # Supprimer
         contributor_id = Contributor.objects.filter(user=self.user2, project=self.project).first().id
         response = self.client.delete(f'/api/projects/{self.project.id}/contributors/{contributor_id}/')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
     def test_issue_crud_author(self):
-        """Test CRUD pour Issue par l'auteur."""
+        """
+        Teste les opérations CRUD pour Issue par l'auteur.
+        """
         token = self.get_token('alice', 'userpass789')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-
         # Créer
         response = self.client.post(
             f'/api/projects/{self.project.id}/issues/',
@@ -159,12 +181,10 @@ class SoftDeskAPITestCase(APITestCase):
             format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
         # Lister (pagination)
         response = self.client.get(f'/api/projects/{self.project.id}/issues/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('count', response.data)
-
         # Mettre à jour
         issue_id = response.data['results'][0]['id']
         response = self.client.put(
@@ -181,16 +201,16 @@ class SoftDeskAPITestCase(APITestCase):
             format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-
         # Supprimer
         response = self.client.delete(f'/api/projects/{self.project.id}/issues/{issue_id}/')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
     def test_comment_crud_author(self):
-        """Test CRUD pour Comment par l'auteur."""
+        """
+        Teste les opérations CRUD pour Comment par l'auteur.
+        """
         token = self.get_token('alice', 'userpass789')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-
         # Créer
         response = self.client.post(
             f'/api/projects/{self.project.id}/issues/{self.issue.id}/comments/',
@@ -198,12 +218,10 @@ class SoftDeskAPITestCase(APITestCase):
             format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-
         # Lister (pagination)
         response = self.client.get(f'/api/projects/{self.project.id}/issues/{self.issue.id}/comments/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('count', response.data)
-
         # Mettre à jour
         comment_uuid = response.data['results'][0]['uuid']
         response = self.client.put(
@@ -212,25 +230,23 @@ class SoftDeskAPITestCase(APITestCase):
             format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-
         # Supprimer
         response = self.client.delete(f'/api/projects/{self.project.id}/issues/{self.issue.id}/comments/{comment_uuid}/')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
     def test_choices_read_only(self):
-        """Test endpoints read-only pour les choix."""
+        """
+        Teste les endpoints read-only pour les choix.
+        """
         token = self.get_token('alice', 'userpass789')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-
         # GET choices pour Project
         response = self.client.get('/api/choices/projects/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('type', response.data)
-
         # POST interdit
         response = self.client.post('/api/choices/projects/', {}, format='json')
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
-
         # GET choices pour Issue
         response = self.client.get('/api/choices/issues/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -239,10 +255,11 @@ class SoftDeskAPITestCase(APITestCase):
         self.assertIn('tag', response.data)
 
     def test_pagination(self):
-        """Test pagination pour les listes."""
+        """
+        Teste la pagination pour les listes.
+        """
         token = self.get_token('alice', 'userpass789')
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-
         # Créer plusieurs projets
         for i in range(15):
             self.client.post(
@@ -250,13 +267,11 @@ class SoftDeskAPITestCase(APITestCase):
                 {'name': f'Projet {i}', 'description': 'Test', 'type': 'BACKEND'},
                 format='json'
             )
-
         # Tester pagination
         response = self.client.get('/api/projects/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 10)  # PAGE_SIZE
         self.assertIsNotNone(response.data['next'])
-
         # Accéder à la page 2
         response = self.client.get('/api/projects/?page=2')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
