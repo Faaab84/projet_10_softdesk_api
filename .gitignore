@@ -1,0 +1,9 @@
+# Ignorer les fichiers de logs
+*.log
+# Ignorer un dossier
+node_modules/
+.env/
+.idea/
+.git/
+enviro/
+__pycache__/
