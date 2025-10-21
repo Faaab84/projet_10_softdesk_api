@@ -9,11 +9,8 @@ from .permissions import IsAuthor, IsProjectContributor, IsProjectAuthor
 
 
 class ProjectViewSet(ModelViewSet):
-    """
-    ViewSet pour gérer les opérations CRUD sur les projets.
-
-    Restreint l'accès aux utilisateurs authentifiés qui sont soit l'auteur,
-    soit un contributeur du projet.
+    """ ViewSet pour gérer les opérations CRUD sur les projets.
+    Restreint l'accès aux utilisateurs authentifiés qui sont soit l'auteur, soit un contributeur du projet.
 
     Attributes:
         queryset (QuerySet): Projets triés par ID.
@@ -25,8 +22,7 @@ class ProjectViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated, IsAuthor | IsProjectContributor]
 
     def get_queryset(self):
-        """
-        Filtre les projets pour inclure uniquement ceux où l'utilisateur est contributeur.
+        """ Filtre les projets pour inclure uniquement ceux où l'utilisateur est contributeur.
 
         Returns:
             QuerySet: Projets filtrés triés par ID.
@@ -34,8 +30,7 @@ class ProjectViewSet(ModelViewSet):
         return Project.objects.filter(contributors__user=self.request.user).order_by('id')
 
     def perform_create(self, serializer):
-        """
-        Crée un projet et ajoute l'utilisateur connecté comme auteur et contributeur.
+        """ Crée un projet et ajoute l'utilisateur connecté comme auteur et contributeur.
 
         Args:
             serializer (Serializer): Sérialiseur contenant les données validées.
@@ -45,11 +40,8 @@ class ProjectViewSet(ModelViewSet):
 
 
 class ContributorViewSet(ModelViewSet):
-    """
-    ViewSet pour gérer les contributeurs d'un projet.
-
-    Restreint l'accès aux utilisateurs authentifiés qui sont soit l'auteur du projet,
-    soit un contributeur.
+    """ ViewSet pour gérer les contributeurs d'un projet.
+    Restreint l'accès aux utilisateurs authentifiés qui sont soit l'auteur du projet, soit un contributeur.
 
     Attributes:
         queryset (QuerySet): Contributeurs triés par ID.
@@ -61,21 +53,18 @@ class ContributorViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated, IsProjectAuthor | IsProjectContributor]
 
     def get_queryset(self):
-        """
-        Filtre les contributeurs pour les projets dont l'utilisateur est l'auteur.
+        """ Filtre les contributeurs pour le projet spécifié dans l'URL.
 
         Returns:
             QuerySet: Contributeurs filtrés triés par ID.
         """
-        return Contributor.objects.filter(project__author=self.request.user).order_by('id')
+        project_id = self.kwargs.get('project_id')  # Extraire project_id de l'URL
+        return Contributor.objects.filter(project_id=project_id).order_by('id')
 
 
 class IssueViewSet(ModelViewSet):
-    """
-    ViewSet pour gérer les opérations CRUD sur les issues.
-
-    Restreint l'accès aux utilisateurs authentifiés qui sont soit l'auteur,
-    soit un contributeur du projet associé.
+    """ ViewSet pour gérer les opérations CRUD sur les issues.
+    Restreint l'accès aux utilisateurs authentifiés qui sont soit l'auteur, soit un contributeur du projet associé.
 
     Attributes:
         queryset (QuerySet): Issues triées par ID.
@@ -87,8 +76,7 @@ class IssueViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated, IsAuthor | IsProjectContributor]
 
     def get_queryset(self):
-        """
-        Filtre les issues pour les projets où l'utilisateur est contributeur.
+        """ Filtre les issues pour les projets où l'utilisateur est contributeur.
 
         Returns:
             QuerySet: Issues filtrées triées par ID.
@@ -96,8 +84,7 @@ class IssueViewSet(ModelViewSet):
         return Issue.objects.filter(project__contributors__user=self.request.user).order_by('id')
 
     def perform_create(self, serializer):
-        """
-        Crée une issue avec l'utilisateur connecté comme auteur.
+        """ Crée une issue avec l'utilisateur connecté comme auteur.
 
         Args:
             serializer (Serializer): Sérialiseur contenant les données validées.
@@ -106,11 +93,8 @@ class IssueViewSet(ModelViewSet):
 
 
 class CommentViewSet(ModelViewSet):
-    """
-    ViewSet pour gérer les opérations CRUD sur les commentaires.
-
-    Restreint l'accès aux utilisateurs authentifiés qui sont soit l'auteur,
-    soit un contributeur du projet associé à l'issue.
+    """ ViewSet pour gérer les opérations CRUD sur les commentaires.
+    Restreint l'accès aux utilisateurs authentifiés qui sont soit l'auteur, soit un contributeur du projet associé à l'issue.
 
     Attributes:
         queryset (QuerySet): Commentaires triés par ID.
@@ -124,8 +108,7 @@ class CommentViewSet(ModelViewSet):
     lookup_field = 'uuid'
 
     def get_queryset(self):
-        """
-        Filtre les commentaires pour les issues des projets où l'utilisateur est contributeur.
+        """ Filtre les commentaires pour les issues des projets où l'utilisateur est contributeur.
 
         Returns:
             QuerySet: Commentaires filtrés triés par ID.
@@ -133,8 +116,7 @@ class CommentViewSet(ModelViewSet):
         return Comment.objects.filter(issue__project__contributors__user=self.request.user).order_by('id')
 
     def perform_create(self, serializer):
-        """
-        Crée un commentaire avec l'utilisateur connecté comme auteur.
+        """ Crée un commentaire avec l'utilisateur connecté comme auteur.
 
         Args:
             serializer (Serializer): Sérialiseur contenant les données validées.
@@ -143,14 +125,12 @@ class CommentViewSet(ModelViewSet):
 
 
 class ProjectChoicesView(APIView):
-    """
-    Vue API pour récupérer les choix de type de projet.
-
+    """ Vue API pour récupérer les choix de type de projet.
     Renvoie la liste des valeurs possibles pour le champ 'type' du modèle Project.
     """
+
     def get(self, request):
-        """
-        Récupère les choix de type de projet.
+        """ Récupère les choix de type de projet.
 
         Args:
             request (Request): Requête HTTP.
@@ -162,14 +142,12 @@ class ProjectChoicesView(APIView):
 
 
 class IssueChoicesView(APIView):
-    """
-    Vue API pour récupérer les choix d'issues.
-
+    """ Vue API pour récupérer les choix d'issues.
     Renvoie les valeurs possibles pour les champs 'status', 'priority' et 'tag' du modèle Issue.
     """
+
     def get(self, request):
-        """
-        Récupère les choix pour les champs d'issues.
+        """ Récupère les choix pour les champs d'issues.
 
         Args:
             request (Request): Requête HTTP.
