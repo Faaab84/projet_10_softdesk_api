@@ -3,160 +3,131 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from django.shortcuts import get_object_or_404
+from django.http import Http404
 from .models import Project, Contributor, Issue, Comment
 from .serializers import ProjectSerializer, ContributorSerializer, IssueSerializer, CommentSerializer
-from .permissions import IsAuthor, IsProjectContributor, IsProjectAuthor
+from .permissions import IsProjectContributor, IsProjectAuthor
 
 
 class ProjectViewSet(ModelViewSet):
-    """ ViewSet pour gérer les opérations CRUD sur les projets.
-    Restreint l'accès aux utilisateurs authentifiés qui sont soit l'auteur, soit un contributeur du projet.
-
-    Attributes:
-        queryset (QuerySet): Projets triés par ID.
-        serializer_class (Serializer): Sérialiseur pour les projets.
-        permission_classes (list): Permissions (authentification et auteur/contributeur).
-    """
+    """ViewSet pour gérer les opérations CRUD sur les projets."""
     queryset = Project.objects.all().order_by('id')
     serializer_class = ProjectSerializer
-    permission_classes = [IsAuthenticated, IsAuthor | IsProjectContributor]
+    permission_classes = [IsProjectContributor]
 
     def get_queryset(self):
-        """ Filtre les projets pour inclure uniquement ceux où l'utilisateur est contributeur.
-
-        Returns:
-            QuerySet: Projets filtrés triés par ID.
-        """
         return Project.objects.filter(contributors__user=self.request.user).order_by('id')
 
     def perform_create(self, serializer):
-        """ Crée un projet et ajoute l'utilisateur connecté comme auteur et contributeur.
-
-        Args:
-            serializer (Serializer): Sérialiseur contenant les données validées.
-        """
         serializer.save(author=self.request.user)
         Contributor.objects.create(user=self.request.user, project=serializer.instance)
 
 
 class ContributorViewSet(ModelViewSet):
-    """ ViewSet pour gérer les contributeurs d'un projet.
-    Restreint l'accès aux utilisateurs authentifiés qui sont soit l'auteur du projet, soit un contributeur.
-
-    Attributes:
-        queryset (QuerySet): Contributeurs triés par ID.
-        serializer_class (Serializer): Sérialiseur pour les contributeurs.
-        permission_classes (list): Permissions (authentification et auteur/contributeur).
-    """
+    """ViewSet pour gérer les contributeurs d'un projet."""
     queryset = Contributor.objects.all().order_by('id')
     serializer_class = ContributorSerializer
-    permission_classes = [IsAuthenticated, IsProjectAuthor | IsProjectContributor]
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            permission_classes = [IsProjectAuthor]
+        else:
+            permission_classes = [IsProjectContributor]
+        return [permission() for permission in permission_classes]
 
     def get_queryset(self):
-        """ Filtre les contributeurs pour le projet spécifié dans l'URL.
-
-        Returns:
-            QuerySet: Contributeurs filtrés triés par ID.
-        """
-        project_id = self.kwargs.get('project_id')  # Extraire project_id de l'URL
+        project_id = self.kwargs.get('project_id')
         return Contributor.objects.filter(project_id=project_id).order_by('id')
 
 
 class IssueViewSet(ModelViewSet):
-    """ ViewSet pour gérer les opérations CRUD sur les issues.
-    Restreint l'accès aux utilisateurs authentifiés qui sont soit l'auteur, soit un contributeur du projet associé.
-
-    Attributes:
-        queryset (QuerySet): Issues triées par ID.
-        serializer_class (Serializer): Sérialiseur pour les issues.
-        permission_classes (list): Permissions (authentification et auteur/contributeur).
-    """
+    """ViewSet pour gérer les opérations CRUD sur les issues."""
     queryset = Issue.objects.all().order_by('id')
     serializer_class = IssueSerializer
-    permission_classes = [IsAuthenticated, IsAuthor | IsProjectContributor]
+    permission_classes = [IsProjectContributor]
 
     def get_queryset(self):
-        """ Filtre les issues pour les projets où l'utilisateur est contributeur.
-
-        Returns:
-            QuerySet: Issues filtrées triées par ID.
-        """
         return Issue.objects.filter(project__contributors__user=self.request.user).order_by('id')
 
     def perform_create(self, serializer):
-        """ Crée une issue avec l'utilisateur connecté comme auteur.
-
-        Args:
-            serializer (Serializer): Sérialiseur contenant les données validées.
-        """
         serializer.save(author=self.request.user)
 
 
 class CommentViewSet(ModelViewSet):
-    """ ViewSet pour gérer les opérations CRUD sur les commentaires.
-    Restreint l'accès aux utilisateurs authentifiés qui sont soit l'auteur, soit un contributeur du projet associé à l'issue.
-
-    Attributes:
-        queryset (QuerySet): Commentaires triés par ID.
-        serializer_class (Serializer): Sérialiseur pour les commentaires.
-        permission_classes (list): Permissions (authentification et auteur/contributeur).
-        lookup_field (str): Champ utilisé pour identifier les commentaires (UUID).
-    """
+    """ViewSet pour gérer les opérations CRUD sur les commentaires."""
     queryset = Comment.objects.all().order_by('id')
     serializer_class = CommentSerializer
-    permission_classes = [IsAuthenticated, IsAuthor | IsProjectContributor]
+    permission_classes = [IsProjectContributor]
     lookup_field = 'uuid'
 
     def get_queryset(self):
-        """ Filtre les commentaires pour les issues des projets où l'utilisateur est contributeur.
-
-        Returns:
-            QuerySet: Commentaires filtrés triés par ID.
-        """
         return Comment.objects.filter(issue__project__contributors__user=self.request.user).order_by('id')
 
     def perform_create(self, serializer):
-        """ Crée un commentaire avec l'utilisateur connecté comme auteur.
-
-        Args:
-            serializer (Serializer): Sérialiseur contenant les données validées.
-        """
         serializer.save(author=self.request.user)
 
-
 class ProjectChoicesView(APIView):
-    """ Vue API pour récupérer les choix de type de projet.
-    Renvoie la liste des valeurs possibles pour le champ 'type' du modèle Project.
-    """
-
     def get(self, request):
-        """ Récupère les choix de type de projet.
-
-        Args:
-            request (Request): Requête HTTP.
-
-        Returns:
-            Response: Liste des valeurs des choix de type.
-        """
         return Response({'type': [choice[0] for choice in Project.TYPE_CHOICES]})
 
-
 class IssueChoicesView(APIView):
-    """ Vue API pour récupérer les choix d'issues.
-    Renvoie les valeurs possibles pour les champs 'status', 'priority' et 'tag' du modèle Issue.
-    """
-
     def get(self, request):
-        """ Récupère les choix pour les champs d'issues.
-
-        Args:
-            request (Request): Requête HTTP.
-
-        Returns:
-            Response: Dictionnaire des valeurs des choix pour status, priority et tag.
-        """
         return Response({
             'status': [choice[0] for choice in Issue.STATUS_CHOICES],
             'priority': [choice[0] for choice in Issue.PRIORITY_CHOICES],
             'tag': [choice[0] for choice in Issue.TAG_CHOICES]
         })
+
+# === NOUVELLE CLASSE POUR 403 AU LIEU DE 404 ===
+class IssueDetailView(APIView):
+    """Gère GET, PUT, PATCH, DELETE pour une issue spécifique."""
+    permission_classes = [IsProjectContributor]
+
+    def _get_project_and_issue(self, project_id, issue_id):
+        project = get_object_or_404(Project, pk=project_id)
+        issue = get_object_or_404(Issue, pk=issue_id, project=project)
+        return project, issue
+
+    def get(self, request, project_id, issue_id):
+        try:
+            project, issue = self._get_project_and_issue(project_id, issue_id)
+        except Http404:
+            return Response({"detail": "Issue non trouvée."}, status=404)
+        # Vérifie la permission → 403 si non contributeur
+        self.check_object_permissions(request, issue)
+        serializer = IssueSerializer(issue)
+        return Response(serializer.data, status=200)
+
+    def put(self, request, project_id, issue_id):
+        try:
+            project, issue = self._get_project_and_issue(project_id, issue_id)
+        except Http404:
+            return Response({"detail": "Issue non trouvée."}, status=404)
+        self.check_object_permissions(request, issue)
+        serializer = IssueSerializer(issue, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=200)
+        return Response(serializer.errors, status=400)
+
+    def patch(self, request, project_id, issue_id):
+        try:
+            project, issue = self._get_project_and_issue(project_id, issue_id)
+        except Http404:
+            return Response({"detail": "Issue non trouvée."}, status=404)
+        self.check_object_permissions(request, issue)
+        serializer = IssueSerializer(issue, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=200)
+        return Response(serializer.errors, status=400)
+
+    def delete(self, request, project_id, issue_id):
+        try:
+            project, issue = self._get_project_and_issue(project_id, issue_id)
+        except Http404:
+            return Response({"detail": "Issue non trouvée."}, status=404)
+        self.check_object_permissions(request, issue)
+        issue.delete()
+        return Response(status=204)
