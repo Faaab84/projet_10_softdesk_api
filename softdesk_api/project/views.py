@@ -11,7 +11,7 @@ from .permissions import IsProjectContributor, IsProjectAuthor
 
 
 class ProjectViewSet(ModelViewSet):
-    """ViewSet pour gérer les opérations CRUD sur les projets."""
+
     queryset = Project.objects.all().order_by('id')
     serializer_class = ProjectSerializer
     permission_classes = [IsProjectContributor]
@@ -67,11 +67,15 @@ class CommentViewSet(ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
+
 class ProjectChoicesView(APIView):
     def get(self, request):
         return Response({'type': [choice[0] for choice in Project.TYPE_CHOICES]})
 
+
 class IssueChoicesView(APIView):
+
+
     def get(self, request):
         return Response({
             'status': [choice[0] for choice in Issue.STATUS_CHOICES],
@@ -79,10 +83,11 @@ class IssueChoicesView(APIView):
             'tag': [choice[0] for choice in Issue.TAG_CHOICES]
         })
 
-# === NOUVELLE CLASSE POUR 403 AU LIEU DE 404 ===
+
 class IssueDetailView(APIView):
     """Gère GET, PUT, PATCH, DELETE pour une issue spécifique."""
     permission_classes = [IsProjectContributor]
+
 
     def _get_project_and_issue(self, project_id, issue_id):
         project = get_object_or_404(Project, pk=project_id)
